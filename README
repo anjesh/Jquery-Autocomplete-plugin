@@ -1,0 +1,58 @@
+# Original auto-complete plugin by Dylan Verheul.
+# Added multiple words selection feature by Anjesh Tuladhar, 2006
+
+
+Copied from my blog http://just-tech.blogspot.com/2006/12/jquery-tweaking-auto-complete-plugin.html 
+Dec 2006
+---------
+I extended the auto-complete plugin so that now it allows to choose the auto-complete mode - multiple or single. With multiple, it will work like gmail compose and with single it works like google suggest. Well single is what the original plugin provides. I will explain the changes done to achieve multiple mode.
+
+
+$.fn.autocomplete = function(url, options) {
+ ...
+    options.mode = options.mode || "single";
+    options.multipleSeparator =
+    options.multipleSeparator || ",";
+ ...
+}
+
+The default mode is single. If you pass 'multiple', now it should work like gmail compose. multipleSeparator separates the multiple words. The default is comma. Try to pass different parameters when you initialize the function.
+
+$(document).ready(function() {
+    $("#suggest").autocomplete('search.php', { minChars:1,
+        matchSubset:1, matchContains:1, cacheLength:10,
+        onItemSelect:selectItem, formatItem:formatItem,
+        selectOnly:1, mode:"multiple",multipleSeparator:"|" 
+    });
+});
+
+When the item gets selected, you need to find whether it's multiple or single. If it's single, you don't need to do anything. But for multiple, you have to search for the separator and append the selected new value to the old one in the selectItem(...) function.
+
+function selectItem(li) {
+    ...
+    if(options.mode == "multiple") {
+            old_value = $input.val();
+            if(old_value.lastIndexOf(options.multipleSeparator) >= 1) {
+                sep_pos = old_value.lastIndexOf(options.multipleSeparator);
+                value = old_value.substr(0,sep_pos+1);
+                new_value = value + v +options.multipleSeparator;
+            } else {
+                new_value = v + options.multipleSeparator;
+            }
+        } else {
+            new_value = v;
+        }
+    ...
+}
+
+The plugin use ajax to fetch the items from either file or database. For that it needs to construct url on its own. If you type 'a', then the url will be http://abc.com/search.php?q=a and it fetches data from that url. However when we are in multiple mode, the input will contain something like "ant,b", in this case, the constructed url will be http://abc.com/search.php?q=ant,b. Since only "b" needs to be passed , the text before comma should be excluded. So this needs some tweaks in the makeUrl(...) function.
+
+function makeUrl(q) {
+    if(options.mode == "multiple") {
+        if(q.lastIndexOf(options.multipleSeparator) >= 1) {
+            sep_pos = q.lastIndexOf(options.multipleSeparator);
+            q = q.substr(sep_pos+1);
+        }
+    }
+    ...
+}
